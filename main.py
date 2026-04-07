@@ -155,37 +155,64 @@ class AutoMuteApp(tk.Tk):
         data["button"].config(bg=new_color)
 
     def apply_phase(self, phase):
-        """フェーズに合わせてDiscord側を制御"""
+        """フェーズに合わせてDiscord側を制御（ボタン制御追加）"""
         if not self.bot: return
+        
+        # --- ボタンを無効化して進行中を表示 ---
+        self.set_buttons_state("disabled")
+        self.lbl_info.config(text=f"🔄 {phase} フェーズ適用中...", fg="blue")
+        
+        # 非同期処理を実行
         self.bot.loop.create_task(self.sync_discord(phase))
 
+    def set_buttons_state(self, state):
+        """操作系ボタンの状態を一括変更"""
+        for child in self.phase_frame.winfo_children():
+            if isinstance(child, tk.Button):
+                child.config(state=state)
+        self.btn_refresh.config(state=state)
+
     async def sync_discord(self, phase):
-        
-        """全員に一斉にミュート命令を送信（並列処理）"""
-        tasks = [] # 実行する命令のリスト
+        """全員に一斉にミュート命令を送信（差分のみ送信して高速化）"""
+        tasks = []
 
         for m_id, data in self.member_data.items():
             member = data["object"]
             is_dead = data["is_dead"]
             
-            # --- フェーズごとの設定値の決定 ---
-            m_mute, m_deafen = False, False
+            # --- 目標ステータスの決定 ---
+            target_mute, target_deafen = False, False
             if phase == "task":
-                if not is_dead: m_mute, m_deafen = True, True
+                if not is_dead: target_mute, target_deafen = True, True
             elif phase == "meeting":
-                if is_dead: m_mute = True
+                if is_dead: target_mute = True
 
-            # 命令を予約（まだ実行しない）
-            tasks.append(member.edit(mute=m_mute, deafen=m_deafen))
+            # --- 高速化の肝：現在の状態と差分がある場合のみ命令を送る ---
+            # これを入れないと、Discord APIが「変化なし」と判断するまで待機が発生します
+            current_vc_state = member.voice
+            if current_vc_state:
+                if (current_vc_state.mute != target_mute) or (current_vc_state.deaf != target_deafen):
+                    tasks.append(member.edit(mute=target_mute, deafen=target_deafen))
 
-        # 予約したすべての命令を「一斉に」実行！
         if tasks:
             try:
-                # これが魔法の1行です
-                await asyncio.gather(*tasks)
-                print(f"Phase {phase} applied to all members simultaneously.")
+                # タイムアウトを設定して固まらないようにする
+                await asyncio.wait_for(asyncio.gather(*tasks), timeout=5.0)
+                status_msg = f"✅ {phase} 適用完了 ({len(tasks)}件変更)"
+            except asyncio.TimeoutError:
+                status_msg = "⚠️ タイムアウト（一部失敗した可能性があります）"
             except Exception as e:
-                print(f"Error in parallel sync: {e}")
+                status_msg = f"❌ エラー: {e}"
+        else:
+            status_msg = "ℹ️ 変更の必要はありませんでした"
+
+        # GUIの復帰
+        self.after(0, lambda: self.finish_phase_change(status_msg))
+
+    def finish_phase_change(self, msg):
+        """処理完了後のUI復帰"""
+        self.set_buttons_state("normal")
+        self.lbl_info.config(text=msg, fg="black")
     
 if __name__ == "__main__":
     app = AutoMuteApp()
