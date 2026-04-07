@@ -13,6 +13,20 @@ class AutoMuteApp(tk.Tk):
         super().__init__()
         self.title("AutoMuteUs-Manual")
         self.geometry("400x600")
+        
+        # --- アイコンの設定 ---
+        if os.path.exists("icon.ico"):
+            try:
+                if os.name == 'nt': # Windowsの場合
+                    self.iconbitmap("icon.ico")
+                else: # WSL / Linuxの場合
+                    # Linuxでは.icoを直接使わず、PhotoImageとして読み込む
+                    # (ただし、Tkinterのバージョンによりこれでもエラーが出る場合があります)
+                    img = tk.PhotoImage(file="icon.ico") # もしエラーならここをコメントアウト
+                    self.tk.call('wm', 'iconphoto', self._w, img)
+            except Exception as e:
+                print(f"アイコンの読み込みをスキップしました: {e}")
+        
         self.bot = None
         self.config = configparser.ConfigParser()
         self.config_file = 'local.config'
