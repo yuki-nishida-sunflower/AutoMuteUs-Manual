@@ -174,7 +174,7 @@ class AutoMuteApp(tk.Tk):
         if tasks:
             try:
                 await asyncio.wait_for(asyncio.gather(*tasks), timeout=5.0)
-                print(f"[完了] Discord反映完了")
+                print(f"[完了] Discord API処理完了 (所要時間: {time.time() - sync_start:.3f}秒)")
             except Exception as e: print(f"❌ エラー: {e}")
         
         print(f"--- [全体: {time.time() - self.start_time:.3f}s] ---\n")
