@@ -173,7 +173,7 @@ class AutoMuteApp(tk.Tk):
         self.btn_refresh.config(state=state)
 
     async def sync_discord(self, phase):
-        """全員に一斉にミュート命令を送信（差分のみ送信して高速化）"""
+        """差分があるメンバーにだけ、一斉に命令を送る（超高速化）"""
         tasks = []
 
         for m_id, data in self.member_data.items():
@@ -183,32 +183,38 @@ class AutoMuteApp(tk.Tk):
             # --- 目標ステータスの決定 ---
             target_mute, target_deafen = False, False
             if phase == "task":
-                if not is_dead: target_mute, target_deafen = True, True
+                if not is_dead:
+                    target_mute, target_deafen = True, True
             elif phase == "meeting":
-                if is_dead: target_mute = True
+                if is_dead:
+                    target_mute = True
 
-            # --- 高速化の肝：現在の状態と差分がある場合のみ命令を送る ---
-            # これを入れないと、Discord APIが「変化なし」と判断するまで待機が発生します
-            current_vc_state = member.voice
-            if current_vc_state:
-                if (current_vc_state.mute != target_mute) or (current_vc_state.deaf != target_deafen):
+            # --- 重要：現在の状態をチェックし、差分がある場合のみ tasks に追加 ---
+            # member.voice.mute / member.voice.deaf を見ることで無駄な通信をゼロにします
+            current_state = member.voice
+            if current_state:
+                # 変更が必要な場合のみ命令リストに入れる
+                if current_state.mute != target_mute or current_state.deaf != target_deafen:
                     tasks.append(member.edit(mute=target_mute, deafen=target_deafen))
 
         if tasks:
             try:
-                # タイムアウトを設定して固まらないようにする
+                # 5秒でタイムアウトするように設定（詰まり防止）
                 await asyncio.wait_for(asyncio.gather(*tasks), timeout=5.0)
-                status_msg = f"✅ {phase} 適用完了 ({len(tasks)}件変更)"
-            except asyncio.TimeoutError:
-                status_msg = "⚠️ タイムアウト（一部失敗した可能性があります）"
+                print(f"✅ {len(tasks)} 名のステータスを更新しました")
             except Exception as e:
-                status_msg = f"❌ エラー: {e}"
-        else:
-            status_msg = "ℹ️ 変更の必要はありませんでした"
-
-        # GUIの復帰
-        self.after(0, lambda: self.finish_phase_change(status_msg))
-
+                print(f"❌ 同期エラー: {e}")
+        
+        # 最後にUIを復帰させる
+        self.after(0, self.unlock_ui)
+        
+    def unlock_ui(self):
+        """ボタンを再度活性化する"""
+        for child in self.phase_frame.winfo_children():
+            child.config(state="normal")
+        self.btn_refresh.config(state="normal")
+        self.lbl_info.config(text="操作完了", fg="green")
+        
     def finish_phase_change(self, msg):
         """処理完了後のUI復帰"""
         self.set_buttons_state("normal")
