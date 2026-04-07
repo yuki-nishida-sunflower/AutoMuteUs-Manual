@@ -48,7 +48,7 @@
 4. 生成された URL をブラウザで開き、自分のサーバーに Bot を招待します。
 
 ### 4. 実行と設定
-1. [Releases](https://github.com/あなたのユーザー名/AutoMuteUs-Manual/releases) から最新の `AutoMuteUs-Manual.exe` をダウンロードします。
+1. [Releases](https://github.com/yuki-nishida-sunflower/AutoMuteUs-Manual/releases) から最新の `AutoMuteUs-Manual.exe` をダウンロードします。
 2. 実行すると同じフォルダに `local.config` が生成されます。
 3. `local.config` をメモ帳などで開き、取得した値を貼り付けて保存します。
    ```ini
