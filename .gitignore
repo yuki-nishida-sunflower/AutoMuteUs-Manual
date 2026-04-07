@@ -1,3 +1,20 @@
+# --- Security (最重要) ---
 .env
+local.config
+
+# --- Python Environment ---
+venv/
+ENV/
 __pycache__/
 *.pyc
+*.pyo
+*.pyd
+
+# --- PyInstaller (ビルド関連) ---
+build/
+dist/
+*.spec
+
+# --- OS generated files ---
+.DS_Store
+Thumbs.db
