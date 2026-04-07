@@ -169,7 +169,7 @@ class AutoMuteApp(tk.Tk):
                 print(f"[準備] {member.display_name}: Mute={t_mute}, Deaf={t_deaf}")
                 tasks.append(member.edit(mute=t_mute, deafen=t_deaf))
 
-        print(f"[完了] 命令準備: {len(tasks)}件 ({time.time() - sync_start:.3f}s)")
+        print(f"[完了] 命令準備: {len(tasks)}件 (所要時間: {time.time() - sync_start:.3f}秒)")
 
         if tasks:
             try:
