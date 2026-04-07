@@ -1,0 +1,2 @@
+# AutoMuteUs-Manual
+AutoMuteUsが動かない時用に手動で生存・死亡を切り替えながら、ミュートを掛ける簡易ツール
