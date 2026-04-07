@@ -2,6 +2,7 @@ import os
 import asyncio
 import threading
 import configparser
+import time  # 冒頭のインポートに追加してください
 import tkinter as tk
 from tkinter import messagebox
 import discord
@@ -157,13 +158,16 @@ class AutoMuteApp(tk.Tk):
     def apply_phase(self, phase):
         """フェーズに合わせてDiscord側を制御（ボタン制御追加）"""
         if not self.bot: return
+        # 計測開始
+        self.start_time = time.time()
+        print(f"\n--- [{phase.upper()} フェーズ開始] ---")
         
         # --- ボタンを無効化して進行中を表示 ---
         self.set_buttons_state("disabled")
         self.lbl_info.config(text=f"🔄 {phase} フェーズ適用中...", fg="blue")
         
         # 非同期処理を実行
-        self.bot.loop.create_task(self.sync_discord(phase))
+        asyncio.run_coroutine_threadsafe(self.sync_discord(phase), self.bot.loop)
 
     def set_buttons_state(self, state):
         """操作系ボタンの状態を一括変更"""
@@ -173,39 +177,48 @@ class AutoMuteApp(tk.Tk):
         self.btn_refresh.config(state=state)
 
     async def sync_discord(self, phase):
-        """差分があるメンバーにだけ、一斉に命令を送る（超高速化）"""
+        """詳細なログを出力しながら同期を実行"""
         tasks = []
+        sync_start = time.time()
 
+        # 1. メンバーの状態チェック
         for m_id, data in self.member_data.items():
             member = data["object"]
             is_dead = data["is_dead"]
             
-            # --- 目標ステータスの決定 ---
             target_mute, target_deafen = False, False
             if phase == "task":
-                if not is_dead:
-                    target_mute, target_deafen = True, True
+                if not is_dead: target_mute, target_deafen = True, True
             elif phase == "meeting":
-                if is_dead:
-                    target_mute = True
+                if is_dead: target_mute = True
 
-            # --- 重要：現在の状態をチェックし、差分がある場合のみ tasks に追加 ---
-            # member.voice.mute / member.voice.deaf を見ることで無駄な通信をゼロにします
             current_state = member.voice
             if current_state:
-                # 変更が必要な場合のみ命令リストに入れる
                 if current_state.mute != target_mute or current_state.deaf != target_deafen:
+                    # 誰に対してどのような命令を出すかログ出し
+                    print(f"[準備] {member.display_name}: Mute={target_mute}, Deafen={target_deafen}")
                     tasks.append(member.edit(mute=target_mute, deafen=target_deafen))
 
+        prep_end = time.time()
+        print(f"[完了] 命令の準備完了: {len(tasks)}件 (所要時間: {prep_end - sync_start:.3f}秒)")
+
+        # 2. Discord APIへのリクエスト実行
         if tasks:
+            print(f"[実行] Discord APIへ一斉送信中...")
+            api_start = time.time()
             try:
-                # 5秒でタイムアウトするように設定（詰まり防止）
                 await asyncio.wait_for(asyncio.gather(*tasks), timeout=5.0)
-                print(f"✅ {len(tasks)} 名のステータスを更新しました")
+                api_end = time.time()
+                print(f"[完了] Discord API処理完了 (所要時間: {api_end - api_start:.3f}秒)")
             except Exception as e:
                 print(f"❌ 同期エラー: {e}")
+        else:
+            print("[スキップ] 変更が必要なメンバーはいませんでした")
+
+        # 3. 全体の所要時間を表示
+        total_end = time.time()
+        print(f"--- [全体所要時間: {total_end - self.start_time:.3f}秒] ---\n")
         
-        # 最後にUIを復帰させる
         self.after(0, self.unlock_ui)
         
     def unlock_ui(self):
