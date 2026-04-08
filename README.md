@@ -13,6 +13,17 @@
 本ツールは `discord.py` を使用し、非常に軽量に動作します 。
 「Bot がサーバーにいない」「コマンドに反応しない」といったトラブル時のバックアップとして、デスクトップに置いておくだけですぐに使用可能です。
 
+## 📥 ダウンロードと選び方
+[Releases](https://github.com/yuki-nishida-sunflower/AutoMuteUs-Manual/releases/tag/v1.3.0)  から最新版をダウンロードしてください。用途に合わせて2つの形式を用意しています。
+| 形式 | おすすめの方 | メリット | デメリット |
+| ---- | ---- |---- | ---- |
+| ポータブル版 (.zip) | 速度重視の方 | 起動が爆速 | 解凍してフォルダごと置く必要がある |
+| 単一EXE版 (.exe) | 手軽さ重視の方 | ファイル1つでどこでも動く | 起動に 5〜15秒 ほどかかる |
+
+## 🚀 実行方法
+- ポータブル版: Zipを解凍し、中にある `AutoMuteUs-Manual.exe` を実行してください。（※ `_internal` フォルダは削除しないでください）
+- 単一EXE版: そのまま実行してください。
+
 ## ✨ 特徴
 - **直感的な GUI**: メンバーを一覧表示し、生存/死亡をワンクリックで切り替え。
 - **差分最適化制御**: 現在のステータスを監視し、変更が必要なメンバーにのみ命令を送信することで通信負荷を軽減。
@@ -48,7 +59,7 @@
 4. 生成された URL をブラウザで開き、自分のサーバーに Bot を招待します。
 
 ### 4. 実行と設定
-1. [Releases](https://github.com/yuki-nishida-sunflower/AutoMuteUs-Manual/releases/tag/v1.2.0) から最新の `AutoMuteUs-Manual.exe` をダウンロードします。
+1. [Releases](https://github.com/yuki-nishida-sunflower/AutoMuteUs-Manual/releases/tag/v1.3.0) から最新の `AutoMuteUs-Manual.exe` をダウンロードします。
 2. 実行すると同じフォルダに `local.config` が生成されます。
 3. `local.config` をメモ帳などで開き、取得した値を貼り付けて保存します。
    ```ini
@@ -90,7 +101,6 @@
 - 会議フェーズ、タスクフェーズが始まると自動で切り替えができません。必ず、導入者がそれぞれのボタンを押して切り替える必要があります。（ボタンを押したらゲームに戻ってOK）
 - 死亡者が居る場合、後から切り替えることになるので、参加者は会議開始後は若干、喋るのを待った方が良い。
 
-
 ---
 
 ## 🔒 セキュリティとプライバシー
@@ -99,7 +109,9 @@
 - **必要最低限の権限**: Bot の権限は「ミュート」「スピーカーミュート」「メンバーの移動（必要な場合）」のみを要求します。
 
 ## 🚀 動作が遅い・動かない場合
+- 起動が遅い: `onefile` 版（単一EXE）をお使いの場合は、Windowsの仕様上解凍待ちが発生します。速さを求める場合はポータブル版（Zip）をご利用ください。
 - Botの権限を確認: サーバー設定の「ロール」で、本Botのロールを操作したいメンバーのロールよりも上に配置してください。
+- 権限エラー: Botに「サーバー管理」「メンバーのミュート」権限があることを確認してください。
 - ボイスリージョンの確認: サーバー設定で地域が「Japan」になっているか確認してください。
 - 管理者実行: Windows の保護機能により動作が制限される場合があるため、右クリックから「管理者として実行」を試してください。
 
@@ -116,6 +128,8 @@ PS C:path> .\venv\Scripts\Activate.ps1
 (venv) PS C:path> python -m PyInstaller --onefile --noconsole --name "AutoMuteUs-Manual" --icon="icon.ico" main.py
 # --noconsole を外してビルド（ログ確認用）
 (venv) PS C:path> python -m PyInstaller --onefile --console --name "AutoMuteUs-Manual-console" --icon="icon.ico" main.py
+# --onedir をつけてビルド（起動処理の高速化用）
+(venv) PS C:path> python -m PyInstaller --onedir --console --name "AutoMuteUs-Manual-console" --icon="icon.ico" main.py
 ```
 
 ### 🎨 アイコンのカスタマイズ
