@@ -202,7 +202,7 @@ class AutoMuteApp(tk.Tk):
         asyncio.run_coroutine_threadsafe(self.sync_discord(phase), self.bot.loop)
 
     async def sync_discord(self, phase):
-        """大人数時のレートリミット対策と自動リトライを追加"""
+        """詳細なリトライログとエラー特定機能を追加"""
         sync_start = time.time()
         
         # 1. 変更が必要なメンバーを抽出
@@ -220,39 +220,46 @@ class AutoMuteApp(tk.Tk):
                 target_actions.append((member, t_mute, t_deaf))
 
         if not target_actions:
-            print("[スキップ] 変更が必要なメンバーはいませんでした")
+            print(f"--- [{phase.upper()} スキップ] 変更不要 ---")
             self.after(0, self._unlock_ui)
             return
 
-        print(f"[開始] 対象: {len(target_actions)}名 / フェーズ: {phase}")
+        print(f"--- [{phase.upper()} 開始] 対象: {len(target_actions)}名 ---")
 
-        # 2. 個別の実行用内部関数 (リトライ機能付き)
+        # 2. 個別の実行用内部関数 (リトライログ付き)
         async def safe_edit(member, m, d, attempt=1):
             try:
-                # 11人以上など人数が多い場合、リクエストをわずかに(0.05秒)ずらして衝突回避
+                # 11人以上の場合はリクエストを散らす
                 if len(target_actions) > 10:
                     await asyncio.sleep(0.05 * (attempt - 1)) 
                 
                 await member.edit(mute=m, deafen=d)
+                # 成功時はあえてログを出さず、全体完了時のみ出すとスッキリします
                 return True, member.display_name
             except Exception as e:
-                if attempt <= 3: # 最大3回までリトライ
-                    wait_time = attempt * 0.5 # 0.5秒, 1.0秒...と待機を増やす
-                    print(f"⚠️ リトライ中: {member.display_name} ({attempt}/3) - {wait_time}s待機中...")
+                if attempt <= 3:
+                    wait_time = attempt * 0.5
+                    # ⚠️ リトライログの出力
+                    print(f"  [!] リトライ中 ({attempt}/3): {member.display_name} | 原因: {e} | {wait_time}s待機...")
                     await asyncio.sleep(wait_time)
                     return await safe_edit(member, m, d, attempt + 1)
                 else:
-                    print(f"❌ 最終失敗: {member.display_name} - {e}")
+                    # ❌ 最終失敗ログの出力
+                    print(f"  [X] 最終失敗: {member.display_name} | エラー: {e}")
                     return False, member.display_name
 
         # 3. 全員の処理を並列実行
-        # (内部で個別にリトライするため、全体の待ち時間は最小限になります)
         tasks = [safe_edit(m, mute, deaf) for m, mute, deaf in target_actions]
         results = await asyncio.gather(*tasks)
 
-        # 4. ログ出力とUIロック解除
-        success_count = sum(1 for success, name in results if success)
-        print(f"--- [反映完了] 成功: {success_count}/{len(target_actions)} ---")
+        # 4. 結果の集計と表示
+        success_names = [name for success, name in results if success]
+        failed_names = [name for success, name in results if not success]
+        
+        if failed_names:
+            print(f"  [結果] 失敗者: {', '.join(failed_names)}")
+        
+        print(f"--- [反映完了] 成功: {len(success_names)}/{len(target_actions)} ---")
         print(f"--- [全体所要時間: {time.time() - self.start_time:.3f}s] ---\n")
         
         self.after(0, self._unlock_ui)
