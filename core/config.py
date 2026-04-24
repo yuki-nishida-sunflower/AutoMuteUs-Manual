@@ -27,3 +27,15 @@ class ConfigManager:
             'guild_id': int(self.config['DISCORD']['GUILD_ID']),
             'voice_id': int(self.config['DISCORD']['VOICE_CHANNEL_ID'])
         }
+
+    def save_discord_settings(self, token: str, guild_id: str, voice_id: str) -> None:
+        """UIから受け取った設定値をファイルに保存する"""
+        if not self.config.has_section('DISCORD'):
+            self.config.add_section('DISCORD')
+            
+        self.config['DISCORD']['BOT_TOKEN'] = token
+        self.config['DISCORD']['GUILD_ID'] = str(guild_id)
+        self.config['DISCORD']['VOICE_CHANNEL_ID'] = str(voice_id)
+        
+        with open(self.filename, 'w') as f:
+            self.config.write(f)

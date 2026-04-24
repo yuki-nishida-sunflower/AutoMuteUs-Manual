@@ -9,6 +9,7 @@ from core.config import ConfigManager
 from core.bot import DiscordClient
 from core.game_state import GameState
 from core.locales import t
+from ui.settings_window import SettingsWindow
 
 # --- 定数 (マジックナンバー・マジックストリングの排除) ---
 WINDOW_SIZE = "480x650"
@@ -60,6 +61,9 @@ class AutoMuteApp(tk.Tk):
     def _create_widgets(self) -> None:
         """UIコンポーネントの生成"""
         # --- Config & Connection ---
+        self.btn_settings = tk.Button(self, text=t("btn_settings"), command=self.open_settings)
+        self.btn_settings.pack(pady=(5, 0), anchor="e", padx=10) # 右上に小さく配置
+        
         self.btn_load_config = tk.Button(self, text=t("btn_config_load"), command=self.load_config_file, bg=COLOR_ERROR, width=30, height=1)
         self.btn_load_config.pack(pady=5)
         
@@ -114,6 +118,10 @@ class AutoMuteApp(tk.Tk):
     # ==========================================
     # 2. ユーザーアクション系メソッド (窓口)
     # ==========================================
+    def open_settings(self) -> None:
+        """設定用のサブウィンドウを開く"""
+        SettingsWindow(self, self.config_manager)
+    
     def load_config_file(self) -> None:
         success, status = self.config_manager.load()
         if status == "CREATED":

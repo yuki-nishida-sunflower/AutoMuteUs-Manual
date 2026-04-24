@@ -42,6 +42,16 @@ STRINGS = {
         "log_failed_users": "  [結果] 失敗者: {names}",
         "log_complete": "--- [反映完了] 成功: {success}/{total} ---",
         "log_time": "--- [全体所要時間: {time:.3f}s] ---\n",
+        
+        # --- Settings Window ---
+        "btn_settings": "⚙️ 設定",
+        "window_settings_title": "設定 (local.config)",
+        "label_token": "Bot トークン:",
+        "label_guild": "サーバー (Guild) ID:",
+        "label_voice": "ボイスチャンネル ID:",
+        "btn_save": "保存",
+        "dialog_saved_title": "保存完了",
+        "dialog_saved_body": "設定を保存しました。再度「① Config読み込み」を行ってください。",
     },
     "en": {
         # 英語化する際はここに翻訳を追加していきます（今回は枠だけ用意）
