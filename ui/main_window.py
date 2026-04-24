@@ -6,31 +6,29 @@ from tkinter import messagebox
 from tkinter import font as tkfont
 from core.config import ConfigManager
 from core.bot import DiscordClient
-from core.locales import t  # 翻訳関数をインポート
+from core.game_state import GameState  # 状態管理の専門家を追加
+from core.locales import t
 
 class AutoMuteApp(tk.Tk):
     def __init__(self):
         super().__init__()
-        # 1. 最小限のUIを即座に構築
         self.title(t("app_title"))
         self.geometry("480x650")
-        
         self.font = "sans-serif"
-        
         self._font_init()
         
-        # 変数の初期化
+        # 専門家（クラス）の初期化
         self.config_manager = ConfigManager()
         self.discord_client = None
-        self.member_data = {}
+        self.game_state = GameState()
+        
+        # UIパーツ（ボタン）だけを保存する辞書
+        self.member_buttons = {}
 
         self._create_widgets()
-        
-        # 2. 画面が表示された後（0.1秒後）に重い処理を開始
         self.after(100, self._late_init)
 
     def _font_init(self):
-        """フォントの初期化"""
         font_candidates = [
             "Meiryo", "Hiragino Kaku Gothic ProN", "AppleGothic", 
             "Noto Sans CJK JP", "Droid Sans Fallback", "sans-serif"
@@ -40,25 +38,21 @@ class AutoMuteApp(tk.Tk):
             if f in available_fonts:
                 self.font = f
                 break
-        
         self.option_add("*font", (self.font, 10))
         self.title(t("app_title"))
         self.geometry("480x650")
     
     def _late_init(self):
-        """バックグラウンドで行う初期化処理"""
         self._setup_icon()
         print(f"DEBUG: アプリ起動完了 (Late Init)")
 
     def _setup_icon(self):
-        """アイコン読み込み"""
         if not os.path.exists("icon.ico"): return
         try:
             if os.name == 'nt': self.iconbitmap("icon.ico")
         except Exception: pass
 
     def _create_widgets(self):
-        """UIコンポーネントの生成"""
         # --- Config & Connection ---
         self.btn_load_config = tk.Button(self, text=t("btn_config_load"), command=self.load_config_file, bg="#ffcccc", width=30, height=1)
         self.btn_load_config.pack(pady=5)
@@ -114,7 +108,6 @@ class AutoMuteApp(tk.Tk):
         self.btn_connect.config(state="disabled", text=t("btn_discord_connecting"))
         settings = self.config_manager.get_discord_settings()
         
-        # 専門家(DiscordClient)を生成
         self.discord_client = DiscordClient(
             settings['token'], settings['guild_id'], settings['voice_id']
         )
@@ -142,52 +135,47 @@ class AutoMuteApp(tk.Tk):
         self.btn_refresh.config(state=state)
 
     def refresh_members(self):
-        """メンバー一覧の生成"""
         if not self.discord_client: return
         for widget in self.members_area.winfo_children(): widget.destroy()
-        self.member_data = {}
-
+        
+        self.member_buttons = {} # UIボタンの初期化
         members = self.discord_client.get_vc_members()
+        
         if members is None:
             messagebox.showerror(t("dialog_vc_error_title"), t("dialog_vc_error_body"))
             return
 
+        # 専門家にデータを渡す
+        self.game_state.set_members(members)
+
+        # UIを描画する
         for i, m in enumerate(members):
             m_id = m.id
-            self.member_data[m_id] = {"object": m, "is_dead": False}
             col, row = i // 5, i % 5
             btn = tk.Button(self.members_area, text=m.display_name, bg="white", 
                             width=16, height=1, pady=5, 
                             command=lambda mid=m_id: self.toggle_dead(mid))
             btn.grid(row=row, column=col, padx=5, pady=5, sticky="nsew")
-            self.member_data[m_id]["button"] = btn
+            self.member_buttons[m_id] = btn
 
     def toggle_dead(self, m_id):
-        data = self.member_data[m_id]
-        data["is_dead"] = not data["is_dead"]
-        data["button"].config(bg="#ff4444" if data["is_dead"] else "white")
+        # 専門家に状態反転をお願いし、新しい状態を受け取る
+        is_dead = self.game_state.toggle_dead(m_id)
+        
+        # 受け取った状態に応じてUI(色)を更新する
+        if m_id in self.member_buttons:
+            self.member_buttons[m_id].config(bg="#ff4444" if is_dead else "white")
 
     def apply_phase(self, phase):
         if not self.discord_client: return
         self.start_time = time.time()
         
         print(t("log_phase_start", phase=phase.upper()))
-        
         self.set_buttons_state("disabled")
         self.lbl_info.config(text=t("info_applying", phase=t(f"phase_{phase}")), fg="blue")
         
-        target_actions = []
-        for data in self.member_data.values():
-            member = data["object"]
-            t_mute, t_deaf = False, False
-            if phase == "task":
-                if not data["is_dead"]: t_mute, t_deaf = True, True
-            elif phase == "meeting":
-                if data["is_dead"]: t_mute = True
-            
-            v = member.voice
-            if v and (v.mute != t_mute or v.deaf != t_deaf):
-                target_actions.append((member, t_mute, t_deaf))
+        # 専門家に「このフェーズでミュートすべき人のリスト」を作ってもらう！(UIは考えない)
+        target_actions = self.game_state.get_target_actions(phase)
 
         if not target_actions:
             print(t("log_phase_skip", phase=phase.upper()))
@@ -202,13 +190,9 @@ class AutoMuteApp(tk.Tk):
         )
 
     def _on_sync_complete(self, results, target_count):
-        """専門家から作業完了の報告を受け取る"""
         success_names = [name for success, name in results if success]
         failed_names = [name for success, name in results if not success]
-        
-        if failed_names:
-            print(t("log_failed_users", names=', '.join(failed_names)))
-        
+        if failed_names: print(t("log_failed_users", names=', '.join(failed_names)))
         print(t("log_complete", success=len(success_names), total=target_count))
         print(t("log_time", time=time.time() - self.start_time))
         self._unlock_ui()
