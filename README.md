@@ -14,15 +14,18 @@
 「Bot がサーバーにいない」「コマンドに反応しない」といったトラブル時のバックアップとして、デスクトップに置いておくだけですぐに使用可能です。
 
 ## 📥 ダウンロードと選び方
-[Releases](https://github.com/yuki-nishida-sunflower/AutoMuteUs-Manual/releases/tag/v1.3.0)  から最新版をダウンロードしてください。用途に合わせて2つの形式を用意しています。
-| 形式 | おすすめの方 | メリット | デメリット |
-| ---- | ---- |---- | ---- |
-| ポータブル版 (.zip) | 速度重視の方 | 起動が爆速 | 解凍してフォルダごと置く必要がある |
-| 単一EXE版 (.exe) | 手軽さ重視の方 | ファイル1つでどこでも動く | 起動に 5〜15秒 ほどかかる |
+[Releases](https://github.com/yuki-nishida-sunflower/AutoMuteUs-Manual/releases/tag/v1.5.0) から最新版をダウンロードしてください。
+ビルドスクリプトの改良により、用途に合わせて以下の形式を提供しています。
+
+| 形式 | 対象ファイル | メリット | デメリット |
+| :--- | :--- | :--- | :--- |
+| **ポータブル版** | `AutoMuteUs-Manual-Portable.zip` | 解凍後、即座に起動します（爆速） | フォルダごと管理する必要があります |
+| **単一EXE版** | `AutoMuteUs-Manual-Standalone.exe` | ファイル1つで持ち運び自由 | 環境により起動に 5〜15秒 かかります |
 
 ## 🚀 実行方法
-- ポータブル版: Zipを解凍し、中にある `AutoMuteUs-Manual.exe` を実行してください。（※ `_internal` フォルダは削除しないでください）
-- 単一EXE版: そのまま実行してください。
+* **ポータブル版**: Zipを解凍し、フォルダ内の `AutoMuteUs-Manual-Portable.exe` を実行してください。
+    * ※ `_internal` フォルダはプログラムの動作に必須なため、削除しないでください。
+* **単一EXE版**: `AutoMuteUs-Manual-Standalone.exe` をそのまま実行してください。
 
 ## ✨ 特徴
 - **直感的な GUI**: メンバーを一覧表示し、生存/死亡をワンクリックで切り替え。
@@ -59,9 +62,9 @@
 4. 生成された URL をブラウザで開き、自分のサーバーに Bot を招待します。
 
 ### 4. 実行と設定
-1. [Releases](https://github.com/yuki-nishida-sunflower/AutoMuteUs-Manual/releases/tag/v1.3.0) から最新の `AutoMuteUs-Manual.exe` をダウンロードします。
-2. 実行すると同じフォルダに `local.config` が生成されます。
-3. `local.config` をメモ帳などで開き、取得した値を貼り付けて保存します。
+1.  [Releases](https://github.com/yuki-nishida-sunflower/AutoMuteUs-Manual/releases/tag/v1.5.0) から最新のファイルをダウンロードします。
+2.  実行すると同じフォルダに `local.config` が自動生成されます。
+3.  `local.config` を編集し、取得したトークン等を設定して保存してください。
    ```ini
    [DISCORD]
    BOT_TOKEN = （ここにトークン）
