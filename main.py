@@ -8,6 +8,8 @@ from tkinter import messagebox
 from tkinter import font as tkfont
 import discord
 from discord.ext import commands
+# ここでは、config.pyのConfigManagerクラスを使用して設定ファイルの管理を行います。
+from core.config import ConfigManager
 
 class AutoMuteApp(tk.Tk):
     
@@ -23,8 +25,7 @@ class AutoMuteApp(tk.Tk):
         
         # 変数の初期化
         self.bot = None
-        self.config = configparser.ConfigParser()
-        self.config_file = "local.config"
+        self.config_manager = ConfigManager()
         self.member_data = {}
 
         self._create_widgets()
@@ -114,20 +115,20 @@ class AutoMuteApp(tk.Tk):
         self.lbl_info = tk.Label(self, text="local.configを編集して読み込んでください", font=(self.font, 8))
         self.lbl_info.pack(side="bottom", pady=5)
 
-    # --- 以降のメソッドは変更なしのため省略（前のコードと同じロジックを使用してください） ---
     def load_config_file(self):
-        if not os.path.exists(self.config_file):
-            self.config['DISCORD'] = {'BOT_TOKEN': 'PASTE_YOUR_TOKEN_HERE', 'GUILD_ID': '0', 'VOICE_CHANNEL_ID': '0'}
-            with open(self.config_file, 'w') as f: self.config.write(f)
-            messagebox.showinfo("作成完了", f"{self.config_file} を作成しました。設定後、再度押してください。")
+        success, status = self.config_manager.load()
+        
+        if status == "CREATED":
+            messagebox.showinfo("作成完了", f"{self.config_manager.filename} を作成しました。設定後、再度押してください。")
             return
-        self.config.read(self.config_file)
-        if self.config['DISCORD']['BOT_TOKEN'] == 'PASTE_YOUR_TOKEN_HERE':
+        elif status == "TOKEN_NOT_SET":
             messagebox.showwarning("設定エラー", "トークンを設定してください。")
             return
-        self.lbl_config_status.config(text="🟢 Config OK", fg="green")
-        self.btn_load_config.config(bg="#ccffcc")
-        self.btn_connect.config(state="normal", bg="#ffffcc")
+            
+        if success:
+            self.lbl_config_status.config(text="🟢 Config OK", fg="green")
+            self.btn_load_config.config(bg="#ccffcc")
+            self.btn_connect.config(state="normal", bg="#ffffcc")
 
     def start_bot_thread(self):
         self.btn_connect.config(state="disabled", text="接続中...")
@@ -140,7 +141,7 @@ class AutoMuteApp(tk.Tk):
         self.bot = commands.Bot(command_prefix="!", intents=intents)
         @self.bot.event
         async def on_ready(): self.after(0, self._on_bot_ready)
-        try: self.bot.run(self.config['DISCORD']['BOT_TOKEN'])
+        try: self.bot.run(self.config_manager.get_discord_settings()['token'])
         except Exception as e:
             self.after(0, lambda: messagebox.showerror("接続エラー", f"失敗: {e}"))
             self.after(0, lambda: self.btn_connect.config(state="normal", text="② Discord接続"))
@@ -162,8 +163,9 @@ class AutoMuteApp(tk.Tk):
         for widget in self.members_area.winfo_children(): widget.destroy()
         self.member_data = {}
 
-        guild = self.bot.get_guild(int(self.config['DISCORD']['GUILD_ID']))
-        vc = guild.get_channel(int(self.config['DISCORD']['VOICE_CHANNEL_ID'])) if guild else None
+        settings = self.config_manager.get_discord_settings()
+        guild = self.bot.get_guild(settings['guild_id'])
+        vc = guild.get_channel(settings['voice_id']) if guild else None
 
         if not vc:
             messagebox.showerror("エラー", "VCが見つかりません")
