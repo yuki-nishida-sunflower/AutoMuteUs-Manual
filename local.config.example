@@ -1,0 +1,9 @@
+[DISCORD]
+# Discord Developer Portalで取得したBotのトークンを貼り付けてください
+bot_token = PASTE_YOUR_TOKEN_HERE
+
+# 対象のサーバー（ギルド）ID
+guild_id = 0
+
+# 対象のボイスチャンネルID
+voice_channel_id = 0
