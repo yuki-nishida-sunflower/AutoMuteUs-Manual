@@ -65,25 +65,29 @@ class DiscordClient:
         asyncio.run_coroutine_threadsafe(wrapper(), self.bot.loop)
 
     async def _execute_actions(self, target_actions: list[tuple[discord.Member, bool, bool]]) -> list[tuple[bool, str]]:
-        """リトライ付きのミュート並列処理"""
+        """リトライ付きのミュート並列処理（レート制限回避版）"""
         total = len(target_actions)
         
-        async def safe_edit(member: discord.Member, m: bool, d: bool, attempt: int = 1) -> tuple[bool, str]:
+        # 🌟 引数に 'index' を追加
+        async def safe_edit(member: discord.Member, m: bool, d: bool, index: int, attempt: int = 1) -> tuple[bool, str]:
             try:
-                if total > 10:
-                    await asyncio.sleep(0.05 * (attempt - 1)) 
+                # 🌟 10名を超える場合は、順番に応じて 0.1秒ずつずらして開始する
+                if total > 10 and attempt == 1:
+                    await asyncio.sleep(0.1 * index)
                 
                 await member.edit(mute=m, deafen=d)
                 return True, member.display_name
             except Exception as e:
+                # ... (以下、リトライ処理は変更なし) ...
                 if attempt <= 3:
                     wait_time = attempt * 0.5
                     print(t("log_retry", attempt=attempt, name=member.display_name, error=e, wait=wait_time))
                     await asyncio.sleep(wait_time)
-                    return await safe_edit(member, m, d, attempt + 1)
+                    return await safe_edit(member, m, d, index, attempt + 1)
                 else:
                     print(t("log_fatal", name=member.display_name, error=e))
                     return False, member.display_name
 
-        tasks = [safe_edit(m, mute, deaf) for m, mute, deaf in target_actions]
+        # 🌟 enumerate を使って index を渡し、並列実行を開始
+        tasks = [safe_edit(m, mute, deaf, i) for i, (m, mute, deaf) in enumerate(target_actions)]
         return await asyncio.gather(*tasks)

@@ -53,24 +53,22 @@ class GameState:
         
         for data in self.members.values():
             status = data["status"]
-            
-            # 🌟 観戦者(spectator) はミュート制御から完全に無視する！
-            if status == "spectator":
-                continue
-                
             member = data["object"]
             t_mute: bool = False
             t_deaf: bool = False
             
-            # --- Among Us のミュートルール ---
-            if phase == "task":
-                if status == "alive":
-                    t_mute, t_deaf = True, True  # 生存者は強ミュート
-            elif phase == "meeting":
-                if status == "dead":
-                    t_mute = True                # 死者はマイクミュートのみ
+            # 🌟 観戦者(spectator) の場合は、常に解除(False)のまま
+            # 🌟 それ以外(alive/dead) の場合に、フェーズに応じた設定を行う
+            if status != "spectator":
+                # --- Among Us のミュートルール ---
+                if phase == "task":
+                    if status == "alive":
+                        t_mute, t_deaf = True, True  # 生存者は強ミュート
+                elif phase == "meeting":
+                    if status == "dead":
+                        t_mute = True                # 死者はマイクミュートのみ
                     
-            # 変更が必要な場合のみリストに追加
+            # 変更が必要な場合（観戦者への切り替え直後を含む）のみリストに追加
             v = member.voice
             if v and (v.mute != t_mute or v.deaf != t_deaf):
                 target_actions.append((member, t_mute, t_deaf))
