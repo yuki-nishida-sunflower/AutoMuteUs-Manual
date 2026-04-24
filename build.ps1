@@ -15,18 +15,21 @@ if (Test-Path ".\venv\Scripts\Activate.ps1") {
     Write-Host "仮想環境が見つかりません。venvを作成してください。" -ForegroundColor Red
 }
 
-# 3. 必要なライブラリのインストール/更新
-pip install discord.py Pillow pyinstaller
+# 3. 必要なライブラリのインストール/更新（アプリの実行に必要なものを一括インストール）
+pip install -r requirements.txt
 
-# 4. ポータブル版 (onedir) のビルド
+# 4. 必要なライブラリのインストール/更新（ビルド作業に必要なツールを個別インストール）
+pip install pyinstaller
+
+# 5. ポータブル版 (onedir) のビルド
 # 起動爆速。フォルダごとZipにして配布する用
 python -m PyInstaller --onedir --noconsole --name "AutoMuteUs-Manual-Portable" --icon="icon.ico" main.py
 
-# 5. 単一EXE版 (onefile) のビルド
+# 7. 単一EXE版 (onefile) のビルド
 # 手軽さ重視。ファイル1つで持ち運びたい人用
 python -m PyInstaller --onefile --noconsole --name "AutoMuteUs-Manual-Standalone" --icon="icon.ico" main.py
 
-# 6. ポータブル版 (onedir/ログあり) のビルド
+# 8. ポータブル版 (onedir/ログあり) のビルド
 # 開発・デバッグ用。コンソールが表示される
 python -m PyInstaller --onedir --console --name "AutoMuteUs-Manual-Portable-ConsoleLog" --icon="icon.ico" main.py
 
