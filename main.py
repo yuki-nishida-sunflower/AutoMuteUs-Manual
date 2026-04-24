@@ -1,18 +1,13 @@
 import os
-import asyncio
 import threading
-import configparser
 import time
 import tkinter as tk
 from tkinter import messagebox
 from tkinter import font as tkfont
-import discord
-from discord.ext import commands
-# ここでは、config.pyのConfigManagerクラスを使用して設定ファイルの管理を行います。
 from core.config import ConfigManager
+from core.bot import DiscordClient
 
 class AutoMuteApp(tk.Tk):
-    
     def __init__(self):
         super().__init__()
         # 1. 最小限のUIを即座に構築
@@ -24,8 +19,8 @@ class AutoMuteApp(tk.Tk):
         self._font_init()
         
         # 変数の初期化
-        self.bot = None
         self.config_manager = ConfigManager()
+        self.discord_client = None
         self.member_data = {}
 
         self._create_widgets()
@@ -35,27 +30,18 @@ class AutoMuteApp(tk.Tk):
 
     def _font_init(self):
         """フォントの初期化: OS毎の優先決めて設定"""
-        # --- OSごとの優先フォントリスト ---
-        # 1. Meiryo (Windows)
-        # 2. Hiragino Sans / AppleGothic (Mac)
-        # 3. Noto Sans CJK JP / Droid Sans Fallback (Ubuntu/Linux)
-        # 4. sans-serif (最終手段)
         font_candidates = [
             "Meiryo", "Hiragino Kaku Gothic ProN", "AppleGothic", 
             "Noto Sans CJK JP", "Droid Sans Fallback", "sans-serif"
         ]
-        # システムに存在する最初のフォントを選択
         available_fonts = tkfont.families()
         for f in font_candidates:
             if f in available_fonts:
                 self.font = f
                 break
         
-        # アプリ全体に適用（サイズ10）
         self.option_add("*font", (self.font, 10))
-        
         self.title("AutoMuteUs-Manual")
-        # 3列表示に対応するため、横幅を少し広めに設定 (480)
         self.geometry("480x650")
     
     def _late_init(self):
@@ -65,13 +51,10 @@ class AutoMuteApp(tk.Tk):
 
     def _setup_icon(self):
         """アイコン読み込みを軽量化"""
-        if not os.path.exists("icon.ico"):
-            return
+        if not os.path.exists("icon.ico"): return
         try:
-            if os.name == 'nt':
-                self.iconbitmap("icon.ico")
-        except Exception:
-            pass
+            if os.name == 'nt': self.iconbitmap("icon.ico")
+        except Exception: pass
 
     def _create_widgets(self):
         """UIコンポーネントの生成: サイズとレイアウトの最適化"""
@@ -93,11 +76,10 @@ class AutoMuteApp(tk.Tk):
         self.btn_refresh = tk.Button(self.control_frame, text="メンバー更新", command=self.refresh_members, state="disabled", width=15)
         self.btn_refresh.pack(pady=10)
 
-        # メンバーエリアをグリッドで管理
         self.members_area = tk.Frame(self.control_frame)
         self.members_area.pack(anchor="n", pady=10)
 
-        # --- Phase Buttons (大型化) ---
+        # --- Phase Buttons ---
         self.phase_frame = tk.Frame(self.control_frame)
         self.phase_frame.pack(side="bottom", pady=10)
         
@@ -107,7 +89,6 @@ class AutoMuteApp(tk.Tk):
             ("会議", "#99ccff", "meeting")
         ]
         for text, color, p_id in phases:
-            # 押しやすいように幅12、高さ2に設定
             btn = tk.Button(self.phase_frame, text=text, bg=color, font=(self.font, 10, "bold"),
                             width=10, height=2, command=lambda p=p_id: self.apply_phase(p), state="disabled")
             btn.pack(side="left", padx=5)
@@ -117,14 +98,12 @@ class AutoMuteApp(tk.Tk):
 
     def load_config_file(self):
         success, status = self.config_manager.load()
-        
         if status == "CREATED":
             messagebox.showinfo("作成完了", f"{self.config_manager.filename} を作成しました。設定後、再度押してください。")
             return
         elif status == "TOKEN_NOT_SET":
             messagebox.showwarning("設定エラー", "トークンを設定してください。")
             return
-            
         if success:
             self.lbl_config_status.config(text="🟢 Config OK", fg="green")
             self.btn_load_config.config(bg="#ccffcc")
@@ -132,22 +111,27 @@ class AutoMuteApp(tk.Tk):
 
     def start_bot_thread(self):
         self.btn_connect.config(state="disabled", text="接続中...")
+        settings = self.config_manager.get_discord_settings()
+        
+        # 専門家(DiscordClient)を生成
+        self.discord_client = DiscordClient(
+            settings['token'], settings['guild_id'], settings['voice_id']
+        )
         threading.Thread(target=self.run_bot, daemon=True).start()
 
     def run_bot(self):
-        intents = discord.Intents.default()
-        intents.members = True
-        intents.voice_states = True
-        self.bot = commands.Bot(command_prefix="!", intents=intents)
-        @self.bot.event
-        async def on_ready(): self.after(0, self._on_bot_ready)
-        try: self.bot.run(self.config_manager.get_discord_settings()['token'])
-        except Exception as e:
-            self.after(0, lambda: messagebox.showerror("接続エラー", f"失敗: {e}"))
-            self.after(0, lambda: self.btn_connect.config(state="normal", text="② Discord接続"))
+        # UIを安全に更新するため、callback内で self.after を使う
+        self.discord_client.start(
+            on_ready_callback=lambda name: self.after(0, self._on_bot_ready, name),
+            on_error_callback=lambda e: self.after(0, self._on_bot_error, e)
+        )
 
-    def _on_bot_ready(self):
-        self.lbl_bot_status.config(text=f"🟢 接続OK: {self.bot.user.name}", fg="green")
+    def _on_bot_error(self, e):
+        messagebox.showerror("接続エラー", f"失敗: {e}")
+        self.btn_connect.config(state="normal", text="② Discord接続")
+
+    def _on_bot_ready(self, bot_name):
+        self.lbl_bot_status.config(text=f"🟢 接続OK: {bot_name}", fg="green")
         self.btn_connect.config(bg="#ccffcc", text="② Discord接続完了")
         self.set_buttons_state("normal")
         messagebox.showinfo("準備完了", "オンラインになりました")
@@ -158,35 +142,24 @@ class AutoMuteApp(tk.Tk):
         self.btn_refresh.config(state=state)
 
     def refresh_members(self):
-        """メンバー一覧の生成: 5人ごとに列を分けるロジック"""
-        if not self.bot: return
+        """メンバー一覧の生成"""
+        if not self.discord_client: return
         for widget in self.members_area.winfo_children(): widget.destroy()
         self.member_data = {}
 
-        settings = self.config_manager.get_discord_settings()
-        guild = self.bot.get_guild(settings['guild_id'])
-        vc = guild.get_channel(settings['voice_id']) if guild else None
-
-        if not vc:
+        # 専門家にメンバー一覧を取ってきてもらう
+        members = self.discord_client.get_vc_members()
+        if members is None:
             messagebox.showerror("エラー", "VCが見つかりません")
             return
 
-        for i, m in enumerate(vc.members):
+        for i, m in enumerate(members):
             m_id = m.id
             self.member_data[m_id] = {"object": m, "is_dead": False}
-            
-            # 列の計算 (5人ごとに列を増やす)
-            col = i // 5
-            row = i % 5
-            
-            # width=16 で横幅確保
-            # pady=5 (上下5px) を入れることで、実質「0.5行分」の余裕を作る
+            col, row = i // 5, i % 5
             btn = tk.Button(self.members_area, text=m.display_name, bg="white", 
-                            width=16, height=1,
-                            pady=5, # ← これでボタンの内側に上下5pxずつの厚みが出す
+                            width=16, height=1, pady=5, 
                             command=lambda mid=m_id: self.toggle_dead(mid))
-            
-            # gridのオプションに pady (外側の縦余白) を追加
             btn.grid(row=row, column=col, padx=5, pady=5, sticky="nsew")
             self.member_data[m_id]["button"] = btn
 
@@ -196,18 +169,12 @@ class AutoMuteApp(tk.Tk):
         data["button"].config(bg="#ff4444" if data["is_dead"] else "white")
 
     def apply_phase(self, phase):
-        if not self.bot: return
+        if not self.discord_client: return
         self.start_time = time.time()
         print(f"\n--- [{phase.upper()} 開始] ---")
         self.set_buttons_state("disabled")
         self.lbl_info.config(text=f"🔄 {phase} 適用中...", fg="blue")
-        asyncio.run_coroutine_threadsafe(self.sync_discord(phase), self.bot.loop)
-
-    async def sync_discord(self, phase):
-        """詳細なリトライログとエラー特定機能を追加"""
-        sync_start = time.time()
         
-        # 1. 変更が必要なメンバーを抽出
         target_actions = []
         for data in self.member_data.values():
             member = data["object"]
@@ -223,48 +190,28 @@ class AutoMuteApp(tk.Tk):
 
         if not target_actions:
             print(f"--- [{phase.upper()} スキップ] 変更不要 ---")
-            self.after(0, self._unlock_ui)
+            self._unlock_ui()
             return
 
         print(f"--- [{phase.upper()} 開始] 対象: {len(target_actions)}名 ---")
+        
+        # 非同期処理は専門家に任せ、終わったら self._on_sync_complete を呼んでもらう
+        self.discord_client.submit_actions(
+            target_actions, 
+            on_complete_callback=lambda results: self.after(0, self._on_sync_complete, results, len(target_actions))
+        )
 
-        # 2. 個別の実行用内部関数 (リトライログ付き)
-        async def safe_edit(member, m, d, attempt=1):
-            try:
-                # 11人以上の場合はリクエストを散らす
-                if len(target_actions) > 10:
-                    await asyncio.sleep(0.05 * (attempt - 1)) 
-                
-                await member.edit(mute=m, deafen=d)
-                # 成功時はあえてログを出さず、全体完了時のみ出すとスッキリします
-                return True, member.display_name
-            except Exception as e:
-                if attempt <= 3:
-                    wait_time = attempt * 0.5
-                    # ⚠️ リトライログの出力
-                    print(f"  [!] リトライ中 ({attempt}/3): {member.display_name} | 原因: {e} | {wait_time}s待機...")
-                    await asyncio.sleep(wait_time)
-                    return await safe_edit(member, m, d, attempt + 1)
-                else:
-                    # ❌ 最終失敗ログの出力
-                    print(f"  [X] 最終失敗: {member.display_name} | エラー: {e}")
-                    return False, member.display_name
-
-        # 3. 全員の処理を並列実行
-        tasks = [safe_edit(m, mute, deaf) for m, mute, deaf in target_actions]
-        results = await asyncio.gather(*tasks)
-
-        # 4. 結果の集計と表示
+    def _on_sync_complete(self, results, target_count):
+        """専門家から作業完了の報告を受け取る"""
         success_names = [name for success, name in results if success]
         failed_names = [name for success, name in results if not success]
         
         if failed_names:
             print(f"  [結果] 失敗者: {', '.join(failed_names)}")
         
-        print(f"--- [反映完了] 成功: {len(success_names)}/{len(target_actions)} ---")
+        print(f"--- [反映完了] 成功: {len(success_names)}/{target_count} ---")
         print(f"--- [全体所要時間: {time.time() - self.start_time:.3f}s] ---\n")
-        
-        self.after(0, self._unlock_ui)
+        self._unlock_ui()
         
     def _unlock_ui(self):
         self.set_buttons_state("normal")
