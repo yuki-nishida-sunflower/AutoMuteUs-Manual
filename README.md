@@ -70,6 +70,7 @@
    BOT_TOKEN = （ここにトークン）
    GUILD_ID = （ここにサーバーID）
    VOICE_CHANNEL_ID = （ここにチャンネルID）
+   ```
 4. 再度アプリを起動し、「① Config読み込み」→「② Discord接続」の順に進めてください。
 
 ## 🎮 操作方法（ゲーム中の使い方）
