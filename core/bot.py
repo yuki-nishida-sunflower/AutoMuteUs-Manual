@@ -1,6 +1,7 @@
 import discord
 from discord.ext import commands
 import asyncio
+from core.locales import t
 
 class DiscordClient:
     def __init__(self, token, guild_id, voice_id):
@@ -46,7 +47,7 @@ class DiscordClient:
         asyncio.run_coroutine_threadsafe(wrapper(), self.bot.loop)
 
     async def _execute_actions(self, target_actions):
-        """リトライ付きのミュート並列処理（元の main.py からお引越し）"""
+        """リトライ付きのミュート並列処理"""
         total = len(target_actions)
         
         async def safe_edit(member, m, d, attempt=1):
@@ -59,11 +60,13 @@ class DiscordClient:
             except Exception as e:
                 if attempt <= 3:
                     wait_time = attempt * 0.5
-                    print(f"  [!] リトライ中 ({attempt}/3): {member.display_name} | 原因: {e} | {wait_time}s待機...")
+                    # 翻訳辞書から呼び出し
+                    print(t("log_retry", attempt=attempt, name=member.display_name, error=e, wait=wait_time))
                     await asyncio.sleep(wait_time)
                     return await safe_edit(member, m, d, attempt + 1)
                 else:
-                    print(f"  [X] 最終失敗: {member.display_name} | エラー: {e}")
+                    # 翻訳辞書から呼び出し
+                    print(t("log_fatal", name=member.display_name, error=e))
                     return False, member.display_name
 
         tasks = [safe_edit(m, mute, deaf) for m, mute, deaf in target_actions]

@@ -6,15 +6,16 @@ from tkinter import messagebox
 from tkinter import font as tkfont
 from core.config import ConfigManager
 from core.bot import DiscordClient
+from core.locales import t  # 翻訳関数をインポート
 
 class AutoMuteApp(tk.Tk):
     def __init__(self):
         super().__init__()
         # 1. 最小限のUIを即座に構築
-        self.title("AutoMuteUs-Manual")
+        self.title(t("app_title"))
         self.geometry("480x650")
         
-        self.font = "sans-serif"  # 後でOSに応じて設定
+        self.font = "sans-serif"
         
         self._font_init()
         
@@ -29,7 +30,7 @@ class AutoMuteApp(tk.Tk):
         self.after(100, self._late_init)
 
     def _font_init(self):
-        """フォントの初期化: OS毎の優先決めて設定"""
+        """フォントの初期化"""
         font_candidates = [
             "Meiryo", "Hiragino Kaku Gothic ProN", "AppleGothic", 
             "Noto Sans CJK JP", "Droid Sans Fallback", "sans-serif"
@@ -41,7 +42,7 @@ class AutoMuteApp(tk.Tk):
                 break
         
         self.option_add("*font", (self.font, 10))
-        self.title("AutoMuteUs-Manual")
+        self.title(t("app_title"))
         self.geometry("480x650")
     
     def _late_init(self):
@@ -50,30 +51,30 @@ class AutoMuteApp(tk.Tk):
         print(f"DEBUG: アプリ起動完了 (Late Init)")
 
     def _setup_icon(self):
-        """アイコン読み込みを軽量化"""
+        """アイコン読み込み"""
         if not os.path.exists("icon.ico"): return
         try:
             if os.name == 'nt': self.iconbitmap("icon.ico")
         except Exception: pass
 
     def _create_widgets(self):
-        """UIコンポーネントの生成: サイズとレイアウトの最適化"""
+        """UIコンポーネントの生成"""
         # --- Config & Connection ---
-        self.btn_load_config = tk.Button(self, text="① Config読み込み", command=self.load_config_file, bg="#ffcccc", width=30, height=1)
+        self.btn_load_config = tk.Button(self, text=t("btn_config_load"), command=self.load_config_file, bg="#ffcccc", width=30, height=1)
         self.btn_load_config.pack(pady=5)
-        self.lbl_config_status = tk.Label(self, text="🔴 未読込", fg="red")
+        self.lbl_config_status = tk.Label(self, text=t("status_unloaded"), fg="red")
         self.lbl_config_status.pack()
 
-        self.btn_connect = tk.Button(self, text="② Discord接続", command=self.start_bot_thread, state="disabled", bg="#eeeeee", width=30, height=1)
+        self.btn_connect = tk.Button(self, text=t("btn_discord_connect"), command=self.start_bot_thread, state="disabled", bg="#eeeeee", width=30, height=1)
         self.btn_connect.pack(pady=5)
-        self.lbl_bot_status = tk.Label(self, text="🔴 未接続", fg="red")
+        self.lbl_bot_status = tk.Label(self, text=t("status_disconnected"), fg="red")
         self.lbl_bot_status.pack()
 
         # --- Game Control ---
-        self.control_frame = tk.LabelFrame(self, text="Game Control", padx=10, pady=10)
+        self.control_frame = tk.LabelFrame(self, text=t("frame_game_control"), padx=10, pady=10)
         self.control_frame.pack(pady=10, fill="both", expand=True)
 
-        self.btn_refresh = tk.Button(self.control_frame, text="メンバー更新", command=self.refresh_members, state="disabled", width=15)
+        self.btn_refresh = tk.Button(self.control_frame, text=t("btn_member_refresh"), command=self.refresh_members, state="disabled", width=15)
         self.btn_refresh.pack(pady=10)
 
         self.members_area = tk.Frame(self.control_frame)
@@ -84,33 +85,33 @@ class AutoMuteApp(tk.Tk):
         self.phase_frame.pack(side="bottom", pady=10)
         
         phases = [
-            ("待機", "#e1e1e1", "waiting"), 
-            ("タスク", "#ff9999", "task"), 
-            ("会議", "#99ccff", "meeting")
+            (t("phase_waiting"), "#e1e1e1", "waiting"), 
+            (t("phase_task"), "#ff9999", "task"), 
+            (t("phase_meeting"), "#99ccff", "meeting")
         ]
         for text, color, p_id in phases:
             btn = tk.Button(self.phase_frame, text=text, bg=color, font=(self.font, 10, "bold"),
                             width=10, height=2, command=lambda p=p_id: self.apply_phase(p), state="disabled")
             btn.pack(side="left", padx=5)
 
-        self.lbl_info = tk.Label(self, text="local.configを編集して読み込んでください", font=(self.font, 8))
+        self.lbl_info = tk.Label(self, text=t("info_startup"), font=(self.font, 8))
         self.lbl_info.pack(side="bottom", pady=5)
 
     def load_config_file(self):
         success, status = self.config_manager.load()
         if status == "CREATED":
-            messagebox.showinfo("作成完了", f"{self.config_manager.filename} を作成しました。設定後、再度押してください。")
+            messagebox.showinfo(t("dialog_created_title"), t("dialog_created_body", filename=self.config_manager.filename))
             return
         elif status == "TOKEN_NOT_SET":
-            messagebox.showwarning("設定エラー", "トークンを設定してください。")
+            messagebox.showwarning(t("dialog_token_error_title"), t("dialog_token_error_body"))
             return
         if success:
-            self.lbl_config_status.config(text="🟢 Config OK", fg="green")
+            self.lbl_config_status.config(text=t("status_config_ok"), fg="green")
             self.btn_load_config.config(bg="#ccffcc")
             self.btn_connect.config(state="normal", bg="#ffffcc")
 
     def start_bot_thread(self):
-        self.btn_connect.config(state="disabled", text="接続中...")
+        self.btn_connect.config(state="disabled", text=t("btn_discord_connecting"))
         settings = self.config_manager.get_discord_settings()
         
         # 専門家(DiscordClient)を生成
@@ -120,22 +121,21 @@ class AutoMuteApp(tk.Tk):
         threading.Thread(target=self.run_bot, daemon=True).start()
 
     def run_bot(self):
-        # UIを安全に更新するため、callback内で self.after を使う
         self.discord_client.start(
             on_ready_callback=lambda name: self.after(0, self._on_bot_ready, name),
             on_error_callback=lambda e: self.after(0, self._on_bot_error, e)
         )
 
     def _on_bot_error(self, e):
-        messagebox.showerror("接続エラー", f"失敗: {e}")
-        self.btn_connect.config(state="normal", text="② Discord接続")
+        messagebox.showerror(t("dialog_conn_error_title"), t("dialog_conn_error_body", error=str(e)))
+        self.btn_connect.config(state="normal", text=t("btn_discord_connect"))
 
     def _on_bot_ready(self, bot_name):
-        self.lbl_bot_status.config(text=f"🟢 接続OK: {bot_name}", fg="green")
-        self.btn_connect.config(bg="#ccffcc", text="② Discord接続完了")
+        self.lbl_bot_status.config(text=t("status_connected", bot_name=bot_name), fg="green")
+        self.btn_connect.config(bg="#ccffcc", text=t("btn_discord_connected"))
         self.set_buttons_state("normal")
-        messagebox.showinfo("準備完了", "オンラインになりました")
-        self.lbl_info.config(text=f"準備完了", fg="blue")
+        messagebox.showinfo(t("dialog_ready_title"), t("dialog_ready_body"))
+        self.lbl_info.config(text=t("info_ready"), fg="blue")
 
     def set_buttons_state(self, state):
         for child in self.phase_frame.winfo_children(): child.config(state=state)
@@ -147,10 +147,9 @@ class AutoMuteApp(tk.Tk):
         for widget in self.members_area.winfo_children(): widget.destroy()
         self.member_data = {}
 
-        # 専門家にメンバー一覧を取ってきてもらう
         members = self.discord_client.get_vc_members()
         if members is None:
-            messagebox.showerror("エラー", "VCが見つかりません")
+            messagebox.showerror(t("dialog_vc_error_title"), t("dialog_vc_error_body"))
             return
 
         for i, m in enumerate(members):
@@ -171,9 +170,11 @@ class AutoMuteApp(tk.Tk):
     def apply_phase(self, phase):
         if not self.discord_client: return
         self.start_time = time.time()
-        print(f"\n--- [{phase.upper()} 開始] ---")
+        
+        print(t("log_phase_start", phase=phase.upper()))
+        
         self.set_buttons_state("disabled")
-        self.lbl_info.config(text=f"🔄 {phase} 適用中...", fg="blue")
+        self.lbl_info.config(text=t("info_applying", phase=t(f"phase_{phase}")), fg="blue")
         
         target_actions = []
         for data in self.member_data.values():
@@ -189,13 +190,12 @@ class AutoMuteApp(tk.Tk):
                 target_actions.append((member, t_mute, t_deaf))
 
         if not target_actions:
-            print(f"--- [{phase.upper()} スキップ] 変更不要 ---")
+            print(t("log_phase_skip", phase=phase.upper()))
             self._unlock_ui()
             return
 
-        print(f"--- [{phase.upper()} 開始] 対象: {len(target_actions)}名 ---")
+        print(t("log_target_count", phase=phase.upper(), count=len(target_actions)))
         
-        # 非同期処理は専門家に任せ、終わったら self._on_sync_complete を呼んでもらう
         self.discord_client.submit_actions(
             target_actions, 
             on_complete_callback=lambda results: self.after(0, self._on_sync_complete, results, len(target_actions))
@@ -207,12 +207,12 @@ class AutoMuteApp(tk.Tk):
         failed_names = [name for success, name in results if not success]
         
         if failed_names:
-            print(f"  [結果] 失敗者: {', '.join(failed_names)}")
+            print(t("log_failed_users", names=', '.join(failed_names)))
         
-        print(f"--- [反映完了] 成功: {len(success_names)}/{target_count} ---")
-        print(f"--- [全体所要時間: {time.time() - self.start_time:.3f}s] ---\n")
+        print(t("log_complete", success=len(success_names), total=target_count))
+        print(t("log_time", time=time.time() - self.start_time))
         self._unlock_ui()
         
     def _unlock_ui(self):
         self.set_buttons_state("normal")
-        self.lbl_info.config(text="操作完了", fg="green")
+        self.lbl_info.config(text=t("info_done"), fg="green")
