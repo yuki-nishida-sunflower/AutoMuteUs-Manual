@@ -62,16 +62,12 @@
 4. 生成された URL をブラウザで開き、自分のサーバーに Bot を招待します。
 
 ### 4. 実行と設定
-1.  [Releases](https://github.com/yuki-nishida-sunflower/AutoMuteUs-Manual/releases/tag/v1.5.0) から最新のファイルをダウンロードします。
-2.  実行すると同じフォルダに `local.config` が自動生成されます。
-3.  `local.config` を編集し、取得したトークン等を設定して保存してください。
-   ```ini
-   [DISCORD]
-   BOT_TOKEN = （ここにトークン）
-   GUILD_ID = （ここにサーバーID）
-   VOICE_CHANNEL_ID = （ここにチャンネルID）
-   ```
-4. 再度アプリを起動し、「① Config読み込み」→「② Discord接続」の順に進めてください。
+1. [Releases](https://github.com/yuki-nishida-sunflower/AutoMuteUs-Manual/releases/tag/v1.6.0) から最新のファイルをダウンロードします。
+2. アプリを実行します。
+3. アプリ画面右上の **「⚙️ 設定」** ボタンをクリックします。
+4. 開いた設定ウィンドウに、取得した「Bot トークン」「サーバー (Guild) ID」「ボイスチャンネル ID」を貼り付け、**「保存」** を押します。
+   <br>*※保存すると、同じフォルダに `local.config` ファイルが自動生成・更新されます。従来通りメモ帳等での直接編集も可能です*
+5. **「① Config読み込み」** → **「② Discord接続」** の順にボタンを押して準備完了です！
 
 ## 🎮 操作方法（ゲーム中の使い方）
 
@@ -88,8 +84,7 @@
 
 1.  死亡したメンバーのボタンをクリックします。
 2.  ボタンが **「赤色」** になり、死亡状態としてマークされます。
-    - もう一度クリックすると「白色（生存）」に戻ります。
-[Image: image_9_annotated.png] * 画像はそのうち
+    - もう一度クリックすると「白色（生存）」に戻ります。<br>[Image: image_9_annotated.png] * 画像はそのうち
 > 💡 この時点ではまだ Discord のミュートは変わりません。アプリ内でステータスを管理している状態です。
 
 ### Step 3: フェーズ切り替え（ミュート実行）
