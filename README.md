@@ -122,7 +122,17 @@
 - PyInstaller (Build)
 
 ### build コマンド
-```
+``` powershell
+# 配置先に移動
+PS C:HOME> CD .\path
+# 実行の許可（許可が無いとエラーになります。）
+PS C:path> Unblock-File -Path .\build.ps1
+# 実行
+PS C:path> .\build.ps1
+# 面倒ならこちらもでOK（ただし、パスの移動は行ってください）
+PS C:path> powershell -ExecutionPolicy Bypass -File .\build.ps1
+
+# 旧コマンド（現状はもう使わないでOK）
 PS C:path> Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope Process
 PS C:path> .\venv\Scripts\Activate.ps1
 (venv) PS C:path> python -m PyInstaller --onefile --noconsole --name "AutoMuteUs-Manual" --icon="icon.ico" main.py
@@ -130,6 +140,8 @@ PS C:path> .\venv\Scripts\Activate.ps1
 (venv) PS C:path> python -m PyInstaller --onefile --console --name "AutoMuteUs-Manual-console" --icon="icon.ico" main.py
 # --onedir をつけてビルド（起動処理の高速化用）
 (venv) PS C:path> python -m PyInstaller --onedir --console --name "AutoMuteUs-Manual-console" --icon="icon.ico" main.py
+
+
 ```
 
 ### 🎨 アイコンのカスタマイズ

@@ -5,7 +5,7 @@ import configparser
 import time
 import tkinter as tk
 from tkinter import messagebox
-from tkinter import font as tkfont # 冒頭のインポートに追加
+from tkinter import font as tkfont
 import discord
 from discord.ext import commands
 
