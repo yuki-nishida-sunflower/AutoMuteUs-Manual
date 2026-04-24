@@ -2,7 +2,7 @@ from typing import Any
 
 class GameState:
     def __init__(self) -> None:
-        # メンバーのID(int)をキーにして、オブジェクト(Any)と生死状態(bool)を管理
+        # メンバーのID(int)をキーにして、オブジェクト(Any)とステータス(str)を管理
         self.members: dict[int, dict[str, Any]] = {}
 
     def set_members(self, member_list: list[Any]) -> None:
@@ -12,30 +12,48 @@ class GameState:
             return
             
         for m in member_list:
-            self.members[m.id] = {"object": m, "is_dead": False}
+            # 初期状態は全員 "alive" (生存)
+            self.members[m.id] = {"object": m, "status": "alive"}
 
-    def toggle_dead(self, member_id: int) -> bool:
-        """指定されたメンバーの生死を反転させ、新しい状態(bool)を返す"""
+    def toggle_status(self, member_id: int) -> str:
+        """指定されたメンバーのステータスを順に切り替え、新しい状態を返す"""
         if member_id in self.members:
-            self.members[member_id]["is_dead"] = not self.members[member_id]["is_dead"]
-            return self.members[member_id]["is_dead"]
-        return False
+            current = self.members[member_id]["status"]
+            
+            # 生存(alive) → 死亡(dead) → 観戦者(spectator) → 生存... とループ
+            if current == "alive":
+                new_status = "dead"
+            elif current == "dead":
+                new_status = "spectator"
+            else:
+                new_status = "alive"
+                
+            self.members[member_id]["status"] = new_status
+            return new_status
+            
+        return "alive"
 
     def get_target_actions(self, phase: str) -> list[tuple[Any, bool, bool]]:
         """指定されたフェーズに基づき、ミュート変更が必要なメンバーのリストを生成して返す"""
         target_actions: list[tuple[Any, bool, bool]] = []
         
         for data in self.members.values():
+            status = data["status"]
+            
+            # 🌟 観戦者(spectator) はミュート制御から完全に無視する！
+            if status == "spectator":
+                continue
+                
             member = data["object"]
             t_mute: bool = False
             t_deaf: bool = False
             
             # --- Among Us のミュートルール ---
             if phase == "task":
-                if not data["is_dead"]:
+                if status == "alive":
                     t_mute, t_deaf = True, True  # 生存者は強ミュート
             elif phase == "meeting":
-                if data["is_dead"]:
+                if status == "dead":
                     t_mute = True                # 死者はマイクミュートのみ
                     
             # 変更が必要な場合のみリストに追加

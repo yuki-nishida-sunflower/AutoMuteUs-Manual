@@ -11,10 +11,11 @@ from core.game_state import GameState
 from core.locales import t
 from ui.settings_window import SettingsWindow
 
-# --- 定数 (マジックナンバー・マジックストリングの排除) ---
+# --- 定数 ---
 WINDOW_SIZE = "480x650"
-COLOR_BTN_NORMAL = "white"
-COLOR_BTN_DEAD = "#ff4444"
+COLOR_BTN_NORMAL = "white"       # 生存
+COLOR_BTN_DEAD = "#ff4444"       # 死亡
+COLOR_BTN_SPECTATOR = "#cccccc"  # 🌟観戦者（グレーを追加）
 COLOR_PHASE_WAITING = "#e1e1e1"
 COLOR_PHASE_TASK = "#ff9999"
 COLOR_PHASE_MEETING = "#99ccff"
@@ -28,8 +29,6 @@ class AutoMuteApp(tk.Tk):
     # ==========================================
     def __init__(self) -> None:
         super().__init__()
-        
-        # メンバ変数の宣言（初期化漏れの防止と型ヒント）
         self.font: str = "sans-serif"
         self.config_manager: ConfigManager = ConfigManager()
         self.discord_client: DiscordClient | None = None
@@ -37,20 +36,14 @@ class AutoMuteApp(tk.Tk):
         self.member_buttons: dict[int, tk.Button] = {}
         self.start_time: float = 0.0
 
-        # UI構築プロセス
         self._setup_window()
         self._create_widgets()
         self.after(100, self._late_init)
 
     def _setup_window(self) -> None:
-        """ウィンドウ設定とフォントの初期化（冗長性の排除）"""
         self.title(t("app_title"))
         self.geometry(WINDOW_SIZE)
-        
-        font_candidates = [
-            "Meiryo", "Hiragino Kaku Gothic ProN", "AppleGothic", 
-            "Noto Sans CJK JP", "Droid Sans Fallback", "sans-serif"
-        ]
+        font_candidates = ["Meiryo", "Hiragino Kaku Gothic ProN", "AppleGothic", "Noto Sans CJK JP", "Droid Sans Fallback", "sans-serif"]
         available_fonts = tkfont.families()
         for f in font_candidates:
             if f in available_fonts:
@@ -59,24 +52,19 @@ class AutoMuteApp(tk.Tk):
         self.option_add("*font", (self.font, 10))
 
     def _create_widgets(self) -> None:
-        """UIコンポーネントの生成"""
-        # --- Config & Connection ---
         self.btn_settings = tk.Button(self, text=t("btn_settings"), command=self.open_settings)
-        self.btn_settings.pack(pady=(5, 0), anchor="e", padx=10) # 右上に小さく配置
+        self.btn_settings.pack(pady=(5, 0), anchor="e", padx=10)
         
         self.btn_load_config = tk.Button(self, text=t("btn_config_load"), command=self.load_config_file, bg=COLOR_ERROR, width=30, height=1)
         self.btn_load_config.pack(pady=5)
-        
         self.lbl_config_status = tk.Label(self, text=t("status_unloaded"), fg="red")
         self.lbl_config_status.pack()
 
         self.btn_connect = tk.Button(self, text=t("btn_discord_connect"), command=self.start_bot_thread, state="disabled", bg="#eeeeee", width=30, height=1)
         self.btn_connect.pack(pady=5)
-        
         self.lbl_bot_status = tk.Label(self, text=t("status_disconnected"), fg="red")
         self.lbl_bot_status.pack()
 
-        # --- Game Control ---
         self.control_frame = tk.LabelFrame(self, text=t("frame_game_control"), padx=10, pady=10)
         self.control_frame.pack(pady=10, fill="both", expand=True)
 
@@ -86,7 +74,6 @@ class AutoMuteApp(tk.Tk):
         self.members_area = tk.Frame(self.control_frame)
         self.members_area.pack(anchor="n", pady=10)
 
-        # --- Phase Buttons ---
         self.phase_frame = tk.Frame(self.control_frame)
         self.phase_frame.pack(side="bottom", pady=10)
         
@@ -104,22 +91,19 @@ class AutoMuteApp(tk.Tk):
         self.lbl_info.pack(side="bottom", pady=5)
 
     def _late_init(self) -> None:
-        """バックグラウンドで行う初期化処理"""
         self._setup_icon()
         print("DEBUG: アプリ起動完了 (Late Init)")
 
     def _setup_icon(self) -> None:
-        """アイコン読み込み"""
         if not os.path.exists("icon.ico"): return
         try:
             if os.name == 'nt': self.iconbitmap("icon.ico")
         except Exception: pass
 
     # ==========================================
-    # 2. ユーザーアクション系メソッド (窓口)
+    # 2. ユーザーアクション系メソッド
     # ==========================================
     def open_settings(self) -> None:
-        """設定用のサブウィンドウを開く"""
         SettingsWindow(self, self.config_manager)
     
     def load_config_file(self) -> None:
@@ -138,10 +122,7 @@ class AutoMuteApp(tk.Tk):
     def start_bot_thread(self) -> None:
         self.btn_connect.config(state="disabled", text=t("btn_discord_connecting"))
         settings = self.config_manager.get_discord_settings()
-        
-        self.discord_client = DiscordClient(
-            str(settings['token']), int(settings['guild_id']), int(settings['voice_id'])
-        )
+        self.discord_client = DiscordClient(str(settings['token']), int(settings['guild_id']), int(settings['voice_id']))
         threading.Thread(target=self.run_bot, daemon=True).start()
 
     def refresh_members(self) -> None:
@@ -161,19 +142,26 @@ class AutoMuteApp(tk.Tk):
             col, row = i // 5, i % 5
             btn = tk.Button(self.members_area, text=m.display_name, bg=COLOR_BTN_NORMAL, 
                             width=16, height=1, pady=5, 
-                            command=lambda mid=m.id: self.toggle_dead(mid))
+                            # 🌟 名前を toggle_status に変更
+                            command=lambda mid=m.id: self.toggle_status(mid))
             btn.grid(row=row, column=col, padx=5, pady=5, sticky="nsew")
             self.member_buttons[m.id] = btn
 
-    def toggle_dead(self, m_id: int) -> None:
-        is_dead = self.game_state.toggle_dead(m_id)
+    # 🌟 ここが3段階切り替え！
+    def toggle_status(self, m_id: int) -> None:
+        new_status = self.game_state.toggle_status(m_id)
         if m_id in self.member_buttons:
-            self.member_buttons[m_id].config(bg=COLOR_BTN_DEAD if is_dead else COLOR_BTN_NORMAL)
+            btn = self.member_buttons[m_id]
+            if new_status == "alive":
+                btn.config(bg=COLOR_BTN_NORMAL)
+            elif new_status == "dead":
+                btn.config(bg=COLOR_BTN_DEAD)
+            elif new_status == "spectator":
+                btn.config(bg=COLOR_BTN_SPECTATOR)
 
     def apply_phase(self, phase: str) -> None:
         if not self.discord_client: return
         self.start_time = time.time()
-        
         print(t("log_phase_start", phase=phase.upper()))
         self.set_buttons_state("disabled")
         self.lbl_info.config(text=t("info_applying", phase=t(f"phase_{phase}")), fg="blue")
@@ -186,7 +174,6 @@ class AutoMuteApp(tk.Tk):
             return
 
         print(t("log_target_count", phase=phase.upper(), count=len(target_actions)))
-        
         self.discord_client.submit_actions(
             target_actions, 
             on_complete_callback=lambda results: self.after(0, self._on_sync_complete, results, len(target_actions))
