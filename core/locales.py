@@ -12,8 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# 多言語対応用の文字列辞書
-STRINGS = {
+from typing import Dict, Any
+
+# 🌟 型ヒントを追加してエディタに構造を教える
+STRINGS: Dict[str, Dict[str, str]] = {
     "ja": {
         # --- UI Labels & Buttons ---
         "app_title": "AutoMuteUs-Manual",
@@ -68,28 +70,33 @@ STRINGS = {
         "dialog_saved_body": "設定を保存しました。再度「① Config読み込み」を行ってください。",
     },
     "en": {
-        # 英語化する際はここに翻訳を追加していきます（今回は枠だけ用意）
         "app_title": "AutoMuteUs-Manual",
         "btn_config_load": "1. Load Config",
         "btn_discord_connect": "2. Connect Discord",
-        # ... (後で拡張可能) ...
     }
 }
 
-# 現在の言語設定（将来的にconfigから読み込むように変更可能です）
-CURRENT_LANG = "ja"
+# 現在の言語設定
+CURRENT_LANG: str = "ja"
 
-def t(key, **kwargs):
+def t(key: str, **kwargs: Any) -> str:
     """
     指定されたキーの翻訳テキストを取得します。
     kwargsが渡された場合は、文字列内の変数をフォーマットして返します。
     """
-    # 現在の言語の辞書を取得（無ければ日本語にフォールバック）
+    # 現在の言語の辞書を取得
     lang_dict = STRINGS.get(CURRENT_LANG, STRINGS["ja"])
-    # キーに対応するテキストを取得（キーが無ければキー名そのままを返す）
+    # キーに対応するテキストを取得
     text = lang_dict.get(key, key)
     
+    # 🌟 型の安全性を確保
+    if not isinstance(text, str):
+        text = str(text)
+
     # {bot_name} などの変数が渡されていれば埋め込む
     if kwargs:
-        return text.format(**kwargs)
+        try:
+            return text.format(**kwargs)
+        except (KeyError, ValueError):
+            return text
     return text
