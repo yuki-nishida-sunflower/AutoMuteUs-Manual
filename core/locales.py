@@ -88,7 +88,7 @@ def t(key: str, **kwargs: Any) -> str:
     # キーに対応するテキストを取得
     text = lang_dict.get(key, key)
     
-    # 🌟 型の安全性を確保
+    # 型の安全性を確保
     if not isinstance(text, str):
         text = str(text)
 

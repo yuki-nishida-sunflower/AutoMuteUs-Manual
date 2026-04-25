@@ -29,7 +29,7 @@ from ui.settings_window import SettingsWindow
 WINDOW_SIZE = "480x650"
 COLOR_BTN_NORMAL = "white"       # 生存
 COLOR_BTN_DEAD = "#ff4444"       # 死亡
-COLOR_BTN_SPECTATOR = "#cccccc"  # 🌟観戦者（グレーを追加）
+COLOR_BTN_SPECTATOR = "#cccccc"  # 観戦者（グレーを追加）
 COLOR_PHASE_WAITING = "#e1e1e1"
 COLOR_PHASE_TASK = "#ff9999"
 COLOR_PHASE_MEETING = "#99ccff"
@@ -156,12 +156,12 @@ class AutoMuteApp(tk.Tk):
             col, row = i // 5, i % 5
             btn = tk.Button(self.members_area, text=m.display_name, bg=COLOR_BTN_NORMAL, 
                             width=16, height=1, pady=5, 
-                            # 🌟 名前を toggle_status に変更
+                            # 名前を toggle_status に変更
                             command=lambda mid=m.id: self.toggle_status(mid))
             btn.grid(row=row, column=col, padx=5, pady=5, sticky="nsew")
             self.member_buttons[m.id] = btn
 
-    # 🌟 ここが3段階切り替え！
+    # ここが3段階切り替え！
     def toggle_status(self, m_id: int) -> None:
         new_status = self.game_state.toggle_status(m_id)
         if m_id in self.member_buttons:

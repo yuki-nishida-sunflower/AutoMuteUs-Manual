@@ -68,10 +68,10 @@ class DiscordClient:
         """リトライ付きのミュート並列処理（レート制限回避版）"""
         total = len(target_actions)
         
-        # 🌟 引数に 'index' を追加
+        # 引数に 'index' を追加
         async def safe_edit(member: discord.Member, m: bool, d: bool, index: int, attempt: int = 1) -> tuple[bool, str]:
             try:
-                # 🌟 10名を超える場合は、順番に応じて 0.1秒ずつずらして開始する
+                # 10名を超える場合は、順番に応じて 0.1秒ずつずらして開始する
                 if total > 10 and attempt == 1:
                     await asyncio.sleep(0.1 * index)
                 
@@ -88,6 +88,6 @@ class DiscordClient:
                     print(t("log_fatal", name=member.display_name, error=e))
                     return False, member.display_name
 
-        # 🌟 enumerate を使って index を渡し、並列実行を開始
+        # enumerate を使って index を渡し、並列実行を開始
         tasks = [safe_edit(m, mute, deaf, i) for i, (m, mute, deaf) in enumerate(target_actions)]
         return await asyncio.gather(*tasks)
