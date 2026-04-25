@@ -14,7 +14,6 @@
 
 from typing import Dict, Any
 
-# 🌟 型ヒントを追加してエディタに構造を教える
 STRINGS: Dict[str, Dict[str, str]] = {
     "ja": {
         # --- UI Labels & Buttons ---

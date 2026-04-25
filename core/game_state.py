@@ -57,8 +57,8 @@ class GameState:
             t_mute: bool = False
             t_deaf: bool = False
             
-            # 🌟 観戦者(spectator) の場合は、常に解除(False)のまま
-            # 🌟 それ以外(alive/dead) の場合に、フェーズに応じた設定を行う
+            # 観戦者(spectator) の場合は、常に解除(False)のまま
+            # それ以外(alive/dead) の場合に、フェーズに応じた設定を行う
             if status != "spectator":
                 # --- Among Us のミュートルール ---
                 if phase == "task":
